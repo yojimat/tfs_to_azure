@@ -1,0 +1,146 @@
+trigger:
+  - master
+
+pool:
+  name: Default
+  vmImage: "windows-latest"
+
+variables:
+  buildConfiguration: "Release"
+  pathToProject: "**/*.sln"
+  chaveProjetoSonarQube: "CHAVE"
+  nomeProjetoSonarQube: "NOME"
+  versaoNetCore: "5.x"
+  pastaArtefato: "PastaArtefato"
+  nomeServico: "SERVIÇO"
+  testsProjects: "**/*Tests/*.csproj"
+
+stages:
+  - stage: Build
+    displayName: "Build"
+    jobs:
+      - job: Build
+        steps:
+          - task: UseDotNet@2
+            displayName: "Adicionando SDK versão 5.x do .NET Core"
+            inputs:
+              version: "$(versaoNetCore)"
+              performMultiLevelLookup: true
+              includePreviewVersions: true # Required for preview versions
+
+          - task: UseDotNet@2
+            displayName: "Adicionando runtime versão 5.x do .NET Core"
+            inputs:
+              version: "$(versaoNetCore)"
+              packageType: runtime
+
+          - task: DotNetCoreCLI@2
+            displayName: Restaurando pacotes
+            inputs:
+              command: "restore"
+              projects: $(PathToProject)
+              feedsToUse: "config"
+              nugetConfigPath: "nuget.config"
+              noCache: true
+
+          - task: DotNetCoreCLI@2
+            displayName: Fase de build
+            inputs:
+              command: "build"
+              projects: $(PathToProject)
+              arguments: "--configuration $(BuildConfiguration) /nodereuse:false"
+
+          - task: SonarQubePrepare@5
+            displayName: Preparação para análise do SonarQube
+            inputs:
+              SonarQube: "Sonar"
+              scannerMode: "CLI"
+              configMode: "manual"
+              cliProjectKey: "$(chaveProjetoSonarQube)"
+              cliProjectName: "$(nomeProjetoSonarQube)"
+              cliProjectVersion: "$(Build.BuildNumber)"
+              cliSources: "."
+              extraProperties: |
+                sonar.exclusions=**/Migrations/**
+                sonar.cs.opencover.reportsPaths=**/coverage.opencover.integration.xml, **/**/coverage.opencover.unit.xml
+
+          - task: DotNetCoreCLI@2
+            displayName: Testes unitarios
+            inputs:
+              command: "test"
+              projects: "$(testsProjects)"
+              arguments: "/p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=coverage.opencover.unit.xml"
+              publishTestResults: false
+              testRunTitle: "Testes unitarios"
+
+          - task: SonarQubeAnalyze@5
+            displayName: Análise do SonarQube
+
+          - task: DotNetCoreCLI@2
+            displayName: Criação do artefato do projeto
+            inputs:
+              command: "publish"
+              publishWebProjects: true
+              projects: "**/*API/*.csproj"
+              arguments: "--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)"
+              zipAfterPublish: true
+
+          - task: DotNetCoreCLI@2
+            displayName: Criação do pacote Nuget
+            inputs:
+              command: "pack"
+              packagesToPack: "**/*API/*.csproj"
+              packDirectory: "$(Build.ArtifactStagingDirectory)/nuget"
+              versioningScheme: "byEnvVar"
+              versionEnvVar: "NUGET_VERSION_NUMBER" # This can use the counter
+
+          - task: SonarQubePublish@5
+            displayName: Publicação da análise no servidor do SonarQube
+            inputs:
+              pollingTimeoutSec: "300"
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publicação do artefatos
+            inputs:
+              TargetPath: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "ArtefatoCriadoPeloBuild"
+
+  ################################ Deploy #################################################
+
+  - stage: Deploy
+    displayName: "Deploy"
+    dependsOn: Build
+    jobs:
+      - deployment: Desenvolvimento
+        environment: Desenvolvimento
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  name: ArtefatoCriadoPeloBuild
+                  displayName: Baixando artefatos
+                - task: ExtractFiles@1
+                  displayName: "Extração de arquivos"
+                  inputs:
+                    destinationFolder: "$(Pipeline.Workspace)/$(pastaArtefato)/Release/"
+                    overwriteExistingFiles: true
+                - task: FileTransform@1
+                  displayName: "Transform - appsettings.json"
+                  inputs:
+                    folderPath: "$(Pipeline.Workspace)/$(pastaArtefato)/Release/"
+                    fileType: json
+                    targetFiles: appsettings.json
+                - task: CopyFilesOverSSH@0
+                  displayName: "Copia via SSH os arquivos para a máquina remota"
+                  inputs:
+                    sshEndpoint: "Publicação Desenvolvimento API / UI"
+                    sourceFolder: "$(Pipeline.Workspace)/$(pastaArtefato)/Release/"
+                    targetFolder: /var/www/$(nomeServico)
+                    cleanTargetFolder: true
+                    failOnEmptySource: true
+                - task: SSH@0
+                  displayName: "Reinicia serviço para as mudanças terem efeito"
+                  inputs:
+                    sshEndpoint: "Publicação Desenvolvimento API / UI"
+                    commands: "sudo systemctl restart $(nomeServico)"

@@ -1,0 +1,31 @@
+{
+    "administratorsGroup": null,
+    "authorization": {
+        "scheme": "UsernamePassword",
+        "parameters": {
+            "username": "076e177745cadc03844da925d7bd7e6018016ad7",
+            "password": ""
+        }
+    },
+    "createdBy": null,
+    "data": {},
+    "description": "",
+    "groupScopeId": null,
+    "name": "Sonar",
+    "operationStatus": null,
+    "readersGroup": null,
+    "serviceEndpointProjectReferences": [
+        {
+            "description": "",
+            "name": "Sonar",
+            "projectReference": {
+                "id": "39daf68e-74a3-46c6-b235-7a073899bbf5",
+                "name": "TESTE Vinicius"
+            }
+        }
+    ],
+    "type": "sonarqube",
+    "url": "http://sonarUrl",
+    "isShared": false,
+    "owner": "library"
+}

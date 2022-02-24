@@ -1,0 +1,14 @@
+{
+  "name": "tfs_to_azure",
+  "version": "0.5.0",
+  "description": "Project for migrating projects from TFS to Azure, made in portuguese",
+  "type": "commonjs",
+  "main": "index.js",
+  "author": "Vinicius Costa",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.25.0",
+    "dotenv": "^16.0.0",
+    "yargs": "^17.3.1"
+  }
+}

@@ -1,0 +1,40 @@
+trigger:
+- master
+
+pool:
+  name: default
+
+variables:
+  npm_config_cache:  $(Pipeline.Workspace)\.npm
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '12.x'
+
+- task: YarnInstaller@3
+  inputs:
+    versionSpec: '1.x'
+  displayName: 'Instalando yarn'
+
+- task: Yarn@3
+  displayName: 'Instalando dependências'
+  inputs:
+    arguments: 'install --cache-folder $(npm_config_cache)'
+
+- task: Yarn@3
+  displayName: 'Build'
+  inputs:
+    arguments: 'build'
+
+- task: Yarn@3
+  displayName: 'Mostrando Cache'
+  inputs:
+    arguments: 'cache list'
+
+- task: PublishBuildArtifacts@1
+  displayName: Publicação do artefatos
+  inputs:
+    PathtoPublish: $(System.DefaultWorkingDirectory)\build
+    ArtifactName: 'ArtefatoCriadoPeloBuild'
+    publishLocation: 'Container'

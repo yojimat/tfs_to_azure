@@ -1,0 +1,74 @@
+
+trigger:
+  - master
+
+pool:
+  name: Default
+  vmImage: "windows-latest"
+
+variables:
+  buildConfiguration: "Release"
+  pathToProjects: "**/*.sln"
+  versaoNetCore: "3.x"
+  testsProjects: "**/*Tests/*.csproj"
+  pathToProjectsToPublish: "**/*API/*.csproj"
+
+stages:
+  - stage: Build
+    displayName: "Build"
+    jobs:
+      - job: Build
+        steps:
+          - task: UseDotNet@2
+            displayName: "Adicionando SDK versão $(versaoNetCore) do .NET Core"
+            inputs:
+              version: "$(versaoNetCore)"
+              performMultiLevelLookup: true
+              includePreviewVersions: true # Required for preview versions
+
+          - task: UseDotNet@2
+            displayName: "Adicionando runtime versão $(versaoNetCore) do .NET Core"
+            inputs:
+              version: "$(versaoNetCore)"
+              packageType: runtime
+
+          - task: DotNetCoreCLI@2
+            displayName: Restaurando pacotes
+            inputs:
+              command: "restore"
+              projects: $(pathToProjects)
+              feedsToUse: "config"
+              nugetConfigPath: "nuget.config"
+              externalFeedCredentials: 'Nuget Server'
+              noCache: true
+
+          - task: DotNetCoreCLI@2
+            displayName: Fase de build
+            inputs:
+              command: "build"
+              projects: $(pathToProjects)
+              arguments: "--configuration $(BuildConfiguration) /nodereuse:false"
+
+          - task: DotNetCoreCLI@2
+            displayName: Testes unitarios
+            inputs:
+              command: "test"
+              projects: "$(testsProjects)"
+              arguments: "/p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=coverage.opencover.unit.xml"
+              publishTestResults: false
+              testRunTitle: "Testes unitarios"
+
+          - task: DotNetCoreCLI@2
+            displayName: Criação do artefato do projeto
+            inputs:
+              command: "publish"
+              publishWebProjects: true
+              projects: "$(pathToProjectsToPublish)"
+              arguments: "--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)"
+              zipAfterPublish: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publicação do artefatos
+            inputs:
+              TargetPath: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "ArtefatoCriadoPeloBuild"

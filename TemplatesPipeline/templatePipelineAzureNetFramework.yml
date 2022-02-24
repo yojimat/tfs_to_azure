@@ -1,0 +1,50 @@
+trigger:
+  - master
+
+pool:
+  name: Default
+  vmImage: "windows-latest"
+
+variables:
+  pathNuget: "nuget.config"
+  buildConfiguration: "Release"
+  pathRestoreSolution: "**/*.sln"
+  pathBuildArtefato: "**/*.sln"
+
+stages:
+  - stage: Build
+    displayName: "Build"
+    jobs:
+      - job: Build
+        steps:
+          - task: NuGetToolInstaller@1
+            displayName: Instalando runtime Nuget
+            inputs:
+              versionSpec: "5.7.0"
+              checkLatest: true
+
+          - task: NuGetCommand@2
+            displayName: Restaurando pacotes Nuget
+            inputs:
+              command: "restore"
+              restoreSolution: "$(pathRestoreSolution)"
+              feedsToUse: "config"
+              nugetConfigPath: "$(pathNuget)"
+              externalFeedCredentials: "Nuget Server"
+
+          - task: MSBuild@1
+            displayName: Criando Artefato
+            inputs:
+              solution: "$(pathBuildArtefato)"
+              msbuildArchitecture: "x64"
+              platform: "Any CPU"
+              configuration: "$(buildConfiguration)"
+              msbuildArguments: '/p:OutDir="$(build.artifactstagingdirectory)" /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true'
+              clean: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publicação do artefatos
+            inputs:
+              PathtoPublish: "$(Build.ArtifactStagingDirectory)"
+              ArtifactName: "drop"
+              publishLocation: "Container"

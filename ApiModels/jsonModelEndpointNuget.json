@@ -1,0 +1,31 @@
+{
+    "administratorsGroup": null,
+    "authorization": {
+        "scheme": "UsernamePassword",
+        "parameters": {
+            "username": "username",
+            "password": "password"
+        }
+    },
+    "createdBy": null,
+    "data": {},
+    "description": "",
+    "groupScopeId": null,
+    "name": "Custom Nuget Server",
+    "operationStatus": null,
+    "readersGroup": null,
+    "serviceEndpointProjectReferences": [
+        {
+            "description": "",
+            "name": "Custom Nuget Server",
+            "projectReference": {
+                "id": "c6b96f78-f739-458f-b04b-026ce190b763",
+                "name": "Repository Project"
+            }
+        }
+    ],
+    "type": "externalnugetfeed",
+    "url": "http://nuget.custom.url.gov.br/nuget/",
+    "isShared": false,
+    "owner": "library"
+}

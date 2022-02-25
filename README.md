@@ -22,7 +22,7 @@ Create the file .env with names described the bellow, and fill them with your va
 - BASE_URL_AZURE
 
 The urls need to have the name of the organization, e.g., 'http://azure.com/ORGANIZATION_NAME'.  
-The tokens are created in the Azure/TFS servers and you need to transform them to base64.
+The tokens are created in the Azure/TFS servers and you need to transform them to base64, like `Basic <Base64 encoded username and password>`; if you use postman, select basic auth and put the token in the username, the token will get encoded in the correct way.
 
 ## Usage
 ```bash
